@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sura System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- الشاشة 1: مرحباً -->
+  <section id="welcome" class="screen active">
+    <h1 class="welcome-text">مرحباً</h1>
+  </section>
+
+  <!-- الشاشة 2: تسجيل الدخول -->
+  <section id="login" class="screen">
+    <form id="login-card" class="card" autocomplete="on" novalidate>
+      <svg class="lock" viewBox="0 0 24 24" width="34" height="34" fill="none"
+           stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4.5" y="10.5" width="15" height="10" rx="3"></rect>
+        <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"></path>
+      </svg>
+
+      <h2>تسجيل الدخول</h2>
+      <p class="subtitle">أكتب الأيميل والباسورد للدخول</p>
+
+      <input id="email" type="email" name="email" placeholder="الإيميل" dir="ltr" autocomplete="email" required>
+      <input id="password" type="password" name="password" placeholder="الباسورد" dir="ltr" autocomplete="current-password" required>
+
+      <p id="msg" class="msg" role="status"></p>
+
+      <div class="buttons">
+        <button type="submit" class="btn primary">دخول</button>
+        <button type="button" id="cancel" class="btn secondary">إلغاء</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- الشاشة 3: أهلاً باسم المستخدم -->
+  <section id="greeting" class="screen">
+    <h1 class="welcome-text">أهلاً يا <span id="uname"></span></h1>
+  </section>
+
+  <!-- الشاشة 4: الأقسام -->
+  <section id="categories" class="screen cats">
+    <button type="button" id="logout" class="logout">تسجيل الخروج</button>
+
+    <div class="grid">
+      <button type="button" class="cat" data-name="الكاشير / POS">
+        <span class="tile">
+          <svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="#9a9a9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 8h6l5 22h20l4-15H14"></path>
+            <circle cx="19" cy="38" r="2.6"></circle>
+            <circle cx="34" cy="38" r="2.6"></circle>
+            <path d="M12 8 8 3" stroke="#e53935"></path>
+            <path d="M18 20h20M20 25h16" stroke-width="1.4"></path>
+          </svg>
+        </span>
+        <span class="label">الكاشير / POS</span>
+      </button>
+
+      <button type="button" class="cat" data-name="المهام / الطلبات">
+        <span class="tile">
+          <svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="#3b4a63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="8" width="26" height="34" rx="4"></rect>
+            <path d="M16 8V6h12v2" stroke="#1e88e5" stroke-width="3"></path>
+            <path d="M15 18l2 2 3-3M15 26l2 2 3-3M15 34l2 2 3-3"></path>
+            <path d="M24 18h6M24 26h6M24 34h4"></path>
+            <circle cx="37" cy="35" r="7" fill="#1e88e5" stroke="#fff" stroke-width="2"></circle>
+            <path d="M33.5 35l2.5 2.5 4.5-4.5" stroke="#fff" stroke-width="2"></path>
+          </svg>
+        </span>
+        <span class="label">المهام / الطلبات</span>
+      </button>
+
+      <button type="button" class="cat" data-name="الخطط / Plans">
+        <span class="tile emoji">📌</span>
+        <span class="label">الخطط / Plans</span>
+      </button>
+
+      <button type="button" class="cat" data-name="كلمات مرور الشركة">
+        <span class="tile emoji">🔓</span>
+        <span class="label">كلمات مرور الشركة</span>
+      </button>
+
+      <button type="button" class="cat" data-name="رأس المال والشركاء">
+        <span class="tile emoji">💰</span>
+        <span class="label">رأس المال والشركاء</span>
+      </button>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+  </section>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const screens = ["welcome", "login", "greeting", "categories"];
+    let timers = [];
+
+    function show(name) {
+      screens.forEach((s) => $(s).classList.toggle("active", s === name));
+    }
+    function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+    // مرحباً ← تسجيل الدخول
+    later(() => show("login"), 2500);
+
+    $("cancel").addEventListener("click", () => {
+      clearTimers();
+      $("login-card").reset();
+      $("msg").textContent = "";
+      show("welcome");
+      later(() => show("login"), 1500);
+    });
+
+    $("logout").addEventListener("click", () => {
+      clearTimers();
+      $("login-card").reset();
+      $("msg").textContent = "";
+      show("login");
+    });
+
+    $("login-card").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = $("msg");
+      msg.className = "msg";
+      msg.textContent = "";
+
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: $("email").value,
+            password: $("password").value,
+          }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          // أهلاً باسم المستخدم، وبعد ثانيتين تظهر صفحة الأقسام
+          $("uname").textContent = data.name;
+          show("greeting");
+          later(() => show("categories"), 2500);
+        } else {
+          msg.classList.add("error");
+          msg.textContent = data.message;
+        }
+      } catch (err) {
+        msg.classList.add("error");
+        msg.textContent = "حصلت مشكلة في الاتصال، حاول مرة أخرى";
+      }
+    });
+
+    // الضغط على أي قسم (مؤقتاً: رسالة قصيرة حتى نبني صفحاته)
+    let toastTimer;
+    document.querySelectorAll(".cat").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const t = $("toast");
+        t.textContent = "قسم «" + btn.dataset.name + "» قيد التجهيز";
+        t.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+      });
+    });
+  </script>
+</body>
+</html>
